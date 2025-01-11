@@ -10,6 +10,10 @@ class Filesystem():
         self.expand()
         self.calc_cond_len()
 
+    def __str__(self) -> str:
+        return "".join([str(x)[-1] for x in range(0, len(self.expanded))]) + "\n" \
+            + "".join([str(x) for x in self.expanded])
+
     def expand(self):
         i = 0
         fid = 0
@@ -30,23 +34,69 @@ class Filesystem():
                 self.cond_len += 1
 
     def move_blocks(self):
-        i = 0
-        j = len(self.expanded) - 1
-        b_size: int = 0
+        frontpointer = self.expanded.index('.')
+        backpointer = len(self.expanded) - 1
+        file_id = self.expanded[backpointer]
 
-        while i in range(len(self.expanded)):
-            # if self.expanded[i] == '.':
-            #     b_size += 1
-            # else:
-            #     if b_size > 0:
-            breakpoint()
+        while file_id >= 0:
+            file_len = 0
+            b_size = 0
+            file_len, backpointer = self.calc_file_len(backpointer, file_id)
+            b_size, frontpointer = self.calc_free_space(frontpointer)
+            if b_size >= file_len:
+                self.push_file(backpointer, file_len, frontpointer, b_size)
+                frontpointer -= b_size - file_len
+            file_id -= 1
+
+    def calc_file_len(self, backpointer, char):
+        file_len = 0
+
+        while True:
+            if self.expanded[backpointer] == '.':
+                backpointer -= 1
+                continue
+            if self.expanded[backpointer] == char:
+                file_len += 1
+                backpointer -= 1
+            else:
+                print(f"Calculated file len: {file_len}, bp: {backpointer}, char: {char}")
+                return file_len, backpointer
+
+    def calc_free_space(self, frontpointer):
+        b_size = 0
+        while True:
+            if self.expanded[frontpointer] != '.' and b_size == 0:
+                frontpointer += 1
+                continue
+            if self.expanded[frontpointer] == '.':
+                b_size += 1
+                frontpointer += 1
+            else:
+                print(f"Calculated free space: {b_size}, fp: {frontpointer}")
+                return b_size, frontpointer
+
+    def push_file(self, bp, file_len, fp, b_size):
+        print(self)
+        i = bp + 1
+        fi = None
+        while i in range(bp + 1, bp + file_len + 1):
+            fi = self.expanded[i]
+            # print(i)
+            # print(self.expanded[i])
+            self.expanded[i] = '.'
             i += 1
-            j -= 1
 
+        j = fp - b_size
+        while j in range(fp - b_size, fp - b_size + file_len):
+            self.expanded[j] = fi
+            j += 1
+
+        print(self)
+        breakpoint()
+        
     def calc_checksum(self):
         for i, n in enumerate(self.ordered):
             self.checksum += (i * n)
-
 
 
 def main(data):
@@ -55,4 +105,3 @@ def main(data):
     fs.move_blocks()
     # fs.calc_checksum()
     return fs.checksum
-
